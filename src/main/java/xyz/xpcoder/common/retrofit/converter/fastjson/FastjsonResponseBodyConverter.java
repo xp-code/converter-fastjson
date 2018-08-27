@@ -13,7 +13,7 @@ import java.lang.reflect.Type;
  * @author tiancai.zang
  * on 2018-08-27 18:34.
  */
-final class FastjsonResponseBodyConverter<T> implements Converter<T, ResponseBody> {
+final class FastjsonResponseBodyConverter<T> implements Converter<ResponseBody, T> {
 
     private Type type;
 
@@ -22,7 +22,7 @@ final class FastjsonResponseBodyConverter<T> implements Converter<T, ResponseBod
     }
 
     @Override
-    public ResponseBody convert(T t) throws IOException {
-        return JSON.parseObject(t.toString(), type);
+    public T convert(ResponseBody t) throws IOException {
+        return JSON.parseObject(t.byteStream(), type);
     }
 }

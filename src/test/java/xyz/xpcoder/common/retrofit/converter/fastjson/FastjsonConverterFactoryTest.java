@@ -1,47 +1,87 @@
 package xyz.xpcoder.common.retrofit.converter.fastjson;
 
 import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.PropertyNamingStrategy;
+import com.alibaba.fastjson.serializer.SerializeConfig;
+import okhttp3.Protocol;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
-import org.junit.Test;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+import retrofit2.Retrofit;
+import retrofit2.http.Body;
+import retrofit2.http.GET;
+import retrofit2.http.POST;
 
 import java.io.IOException;
+import java.net.Inet4Address;
+import java.net.InetAddress;
+import java.util.Arrays;
+import java.util.Collections;
 
-@Tag("FastjsonConverterFactoryTest")
-public class FastjsonConverterFactoryTest {
+import static org.junit.jupiter.api.Assertions.*;
 
-    private MockWebServer webServer;
+class FastjsonConverterFactoryTest {
 
 
-    @BeforeAll
-    public void setUp() {
-        webServer = new MockWebServer();
+    @Rule
+    private MockWebServer webServer = new MockWebServer();
 
-        webServer.enqueue(new MockResponse()
-                .setResponseCode(200)
-                .addHeader("cookies","cookies")
-                .setBody(JSON.toJSONString(new BookResDTO(200,"操作成功",Boolean.TRUE)
-        )));
 
-        try {
-            webServer.start(8080);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+    @BeforeEach
+    void setUp() throws IOException {
 
+        webServer.start(8080);
+
+        MockResponse response = new MockResponse()
+                .addHeader("cookies", "cookies")
+                .setBody(JSON.toJSONString(new BookResDTO(200, "操作成功", Boolean.TRUE)
+                ));
+
+        webServer.enqueue(response);
+
+    }
+
+
+    @AfterEach
+    void tearDown() throws IOException {
+        webServer.shutdown();
     }
 
     @Test
-    public void test(){
+    void create() throws IOException {
 
-        System.out.println(webServer.getHostName()+" "+ webServer.getPort());
+        SerializeConfig serializeConfig = SerializeConfig.getGlobalInstance();
+        serializeConfig.setPropertyNamingStrategy(PropertyNamingStrategy.SnakeCase);
+
+        Retrofit retrofit = new  Retrofit.Builder()
+                .baseUrl(webServer.url("/"))
+                .addConverterFactory(FastjsonConverterFactory.create())
+                .build();
+
+        Response<BookResDTO> resDTOResponse = retrofit.create(BookService.class)
+                .book(new BookReqDTO("", 123.12))
+                .execute();
+
+        System.out.println(resDTOResponse.body().getCode());
+
+
     }
 
+    public interface BookService{
 
+        @POST("/")
+        Call<BookResDTO> book(@Body BookReqDTO req);
+    }
 
-    static class BookReqDTO{
+    public static class BookReqDTO{
 
         private String name;
         private Double price;
@@ -68,7 +108,7 @@ public class FastjsonConverterFactoryTest {
         }
     }
 
-    static class BookResDTO{
+    public static class BookResDTO{
 
         private Integer code;
         private String message;
@@ -104,5 +144,4 @@ public class FastjsonConverterFactoryTest {
             this.success = success;
         }
     }
-
 }
